@@ -7,76 +7,80 @@
   <meta charset="UTF-8">
   <title>게시글 등록</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <  <style>
-  /* 전체 폰트 및 배경 스타일 */
-  body {
-    font-family: 'Gaegu', sans-serif;
-    background-color: #b7dce8;
-  }
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu&display=swap" rel="stylesheet">
 
-  /* 헤더 섹션 스타일 */
-  header {
-    background-color: #4c88cf; /* 헤더 색 */
-    color: white;
-  }
+  <style>
+    /* 전체 폰트 및 배경 스타일 */
+    body {
+      font-family: 'Gaegu', sans-serif;
+      background-color: #b7dce8;
+    }
 
+    /* 헤더 스타일 */
+    header {
+      background-color: #4c88cf;
+      color: white;
+      padding: 20px 0;
+      text-align: center;
+      border-radius: 15px;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
 
-  header h1 {
-    font-size: 2.5rem; /* 기존 크기 유지 */
-    font-weight: bold;
-  }
+    header p {
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
 
-  header p {
-    font-size: 1.2rem; /* 기존 크기 유지 */
-    color: rgba(255, 255, 255, 0.8);
-  }
+    /* 폼 필드 스타일 */
+    form .form-label {
+      font-weight: bold;
+    }
 
-  /* 폼 필드 스타일 */
-  form .form-label {
-    font-weight: bold;
-  }
+    form .form-control {
+      border-radius: 8px;
+    }
 
-  form .form-control {
-    border-radius: 8px;
-  }
+    form .form-control:focus {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.25);
+    }
 
-  form .form-control:focus {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.25);
-  }
+    /* 지도 스타일 */
+    #map {
+      border: 2px solid #4a90e2;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      height: 400px;
+    }
 
-  /* 지도 스타일 */
-  #map {
-    border: 2px solid #4a90e2;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    height: 400px;
-  }
+    /* 버튼 스타일 */
+    .btn-primary {
+      background-color: #4a90e2;
+      border: none;
+    }
 
-  /* 버튼 스타일 */
-  .btn-primary {
-    background-color: #4a90e2;
-    border: none;
-  }
+    .btn-primary:hover {
+      background-color: #3b7fc9;
+    }
 
-  .btn-primary:hover {
-    background-color: #3b7fc9;
-  }
+    /* 업로드 필드 스타일 */
+    #files {
+      border: 2px dashed #4a90e2;
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+    }
 
-  /* 업로드 필드 스타일 */
-  #files {
-    border: 2px dashed #4a90e2;
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 10px;
-    cursor: pointer;
-  }
-
-  #files:focus {
-    border-color: #3b7fc9;
-  }
-</style>
+    #files:focus {
+      border-color: #3b7fc9;
+    }
+  </style>
   <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=9n21s23li1"></script>
   <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps-geocoder.js?ncpClientId=9n21s23li1"></script>
 </head>
@@ -105,15 +109,15 @@
           <textarea class="form-control" id="contentText" name="contentText" rows="5" required></textarea>
         </div>
 
-        <div class="mb-3">
-          <label for="requiredParticipants" class="form-label">모집 인원</label>
-          <input type="number" class="form-control" id="requiredParticipants" name="requiredParticipants" min="1" required>
-        </div>
-
-        <div class="mb-3">
-          <label for="deadline" class="form-label">모집 마감일</label>
-          <input type="date" class="form-control" id="deadline" name="deadline"
-                 min="${T(java.time.LocalDate).now()}" required>
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label for="requiredParticipants" class="form-label">모집 인원</label>
+            <input type="number" class="form-control" id="requiredParticipants" name="requiredParticipants" placeholder="모집 인원" min="1" required>
+          </div>
+          <div class="col-md-6">
+            <label for="deadline" class="form-label">모집 마감일</label>
+            <input type="date" class="form-control" id="deadline" name="deadline" min="${T(java.time.LocalDate).now()}" required>
+          </div>
         </div>
 
         <div>
@@ -157,7 +161,6 @@
     </div>
   </div>
 
-  <!-- 스크립트 수정 -->
   <script>
     // 폼 제출 이벤트 핸들러
     document.getElementById('postForm').addEventListener('submit', function (event) {
@@ -165,6 +168,9 @@
       const useRandomImageInput = document.getElementById('useRandomImage');
       const latitude = document.getElementById('latitude').value;
       const longitude = document.getElementById('longitude').value;
+
+      console.log("폼 제출 시작");
+      console.log("파일 입력 값:", fileInput.value);
 
       // 장소 입력 여부 확인
       if (!latitude || !longitude) {
@@ -175,18 +181,21 @@
         return;
       }
 
-      if (!fileInput.value) {
+      if (!fileInput.value) { // 파일이 없을 경우
         console.log("파일이 업로드되지 않았습니다.");
-        event.preventDefault();
+        event.preventDefault(); // 기본 폼 제출 중단
         const useRandomImage = confirm("이미지가 업로드되지 않았습니다. 랜덤 이미지를 사용하시겠습니까?");
 
         if (useRandomImage) {
           console.log("랜덤 이미지를 사용합니다.");
           useRandomImageInput.value = "true"; // 랜덤 이미지 사용 설정
+          console.log("useRandomImageInput 값 설정 완료:", useRandomImageInput.value);
           this.submit(); // 폼 다시 제출
         } else {
           console.log("사용자가 랜덤 이미지를 거부했습니다.");
         }
+      } else {
+        console.log("파일이 업로드되었습니다. 폼을 정상적으로 제출합니다.");
       }
     });
 

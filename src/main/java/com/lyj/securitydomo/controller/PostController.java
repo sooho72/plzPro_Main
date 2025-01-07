@@ -24,6 +24,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -185,25 +186,23 @@ public class PostController {
     public String read(@PathVariable Long postId, Model model,
                        @AuthenticationPrincipal PrincipalDetails principal) {
         String currentUsername = principal.getUser().getUsername();
-        Long currentUserId = principal.getUser().getUserId(); // 추가된 userId 가져오기
-
-        // 게시글 상세 정보 조회
-        PostDTO postDTO = postService.readOne(postId);
-        model.addAttribute("post", postDTO);
-        model.addAttribute("isAuthor", true); // 작성자인 경우
-        model.addAttribute("originalImages", postDTO.getOriginalImageLinks());
-
-        // 로그인한 사용자 정보 추가
-        model.addAttribute("user", principal.getUser());
-        model.addAttribute("currentUsername", currentUsername); // 유지
-        model.addAttribute("currentUserId", currentUserId);     // 추가
+        Long currentUserId = principal.getUser().getUserId();
 
         // 관리자 여부 확인
         boolean isAdmin = "ADMIN".equals(principal.getUser().getRole());
+
+        // 게시글 상세 정보 조회 (관리자는 비공개 게시글도 조회 가능)
+        PostDTO postDTO = postService.readOne(postId, isAdmin); // isAdmin 매개변수 추가
+        model.addAttribute("post", postDTO);
         model.addAttribute("isAdmin", isAdmin);
 
+        // 로그인한 사용자 정보 추가
+        model.addAttribute("user", principal.getUser());
+        model.addAttribute("currentUsername", currentUsername);
+        model.addAttribute("currentUserId", currentUserId);
+
         // 작성자 여부 확인
-        boolean isAuthor = postDTO.getAuthor().equals(principal.getUser().getUsername());
+        boolean isAuthor = postDTO.getAuthor().equals(currentUsername);
         model.addAttribute("isAuthor", isAuthor);
 
         // 게시글 공개 상태 추가 (관리자 전용)
@@ -248,7 +247,7 @@ public class PostController {
                 fileNames = List.of(randomImage);
             } else if (uploadFileDTO.getFiles() != null && !uploadFileDTO.getFiles().isEmpty() &&
                     !uploadFileDTO.getFiles().get(0).getOriginalFilename().isEmpty()) {
-                // 업로드된 파일 처리
+                // 파일 업로드 처리
                 fileNames = uploadFiles(uploadFileDTO);
             } else {
                 // 파일이 없고 랜덤 이미지를 사용하지 않을 경우
@@ -256,62 +255,65 @@ public class PostController {
                 return "redirect:/posting/register";
             }
 
-            // 파일 이름을 게시글 DTO에 설정
-            postDTO.setFileNames(fileNames);
-
-            // 게시글 등록 처리
-            Long postId = postService.register(postDTO);
-
-            // 등록 성공 메시지 전달
-            redirectAttributes.addFlashAttribute("result", postId);
+            postDTO.setFileNames(fileNames); // 파일 이름 설정
+            Long postId = postService.register(postDTO); // 게시글 등록
+            redirectAttributes.addFlashAttribute("result", postId); // 등록 성공 알림
 
             log.info("게시글 등록 성공: ID={}", postId);
         } catch (Exception e) {
-            // 에러 발생 시 에러 메시지 전달
             log.error("게시글 등록 오류: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("error", "게시글 등록 중 문제가 발생했습니다.");
             return "redirect:/posting/register";
         }
 
-        // 게시글 등록 후 리스트 페이지로 이동
         return "redirect:/posting/list";
     }
     /**
      * 특정 게시글 수정 페이지를 로드하는 메서드
      */
     @GetMapping("/modify/{postId}")
-    public String modify(@PathVariable Long postId, Model model) {
-        PostDTO postDTO = postService.readOne(postId); // 기존 게시글 정보 읽기
+    public String modify(@PathVariable Long postId, Model model,
+                         @AuthenticationPrincipal PrincipalDetails principal) {
+        String currentUsername = principal.getUser().getUsername();
+        boolean isAdmin = "ADMIN".equals(principal.getUser().getRole());
+
+        // 게시글 정보 조회 (관리자는 비공개 게시글도 조회 가능)
+        PostDTO postDTO = postService.readOne(postId, isAdmin);
+        if (!isAdmin && !postDTO.getAuthor().equals(currentUsername)) {
+            throw new AccessDeniedException("수정 권한이 없습니다.");
+        }
+
         model.addAttribute("post", postDTO);
-        model.addAttribute("originalImages", postDTO.getOriginalImageLinks()); // 기존 이미지
+        model.addAttribute("originalImages", postDTO.getOriginalImageLinks());
 
         log.info("수정할 게시글 정보: {}", postDTO);
         return "posting/modify";
     }
 
-    /**
-     * 게시글 수정 처리를 위한 메서드
-     */
     @PostMapping("/modify/{postId}")
     public String modifyPost(@PathVariable Long postId, PageRequestDTO pageRequestDTO, UploadFileDTO uploadFileDTO,
-                             @Valid PostDTO postDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+                             @Valid PostDTO postDTO, BindingResult bindingResult, RedirectAttributes redirectAttributes,
+                             @AuthenticationPrincipal PrincipalDetails principal) {
         if (bindingResult.hasErrors()) {
             redirectAttributes.addFlashAttribute("errors", bindingResult.getAllErrors());
             redirectAttributes.addAttribute("postId", postDTO.getPostId());
             return "redirect:/posting/modify/" + postId;
         }
 
-        try {
-            List<String> fileNames;
+        String currentUsername = principal.getUser().getUsername();
+        boolean isAdmin = "ADMIN".equals(principal.getUser().getRole());
 
-            if (uploadFileDTO.getFiles() != null && !uploadFileDTO.getFiles().isEmpty() &&
-                    !uploadFileDTO.getFiles().get(0).getOriginalFilename().isEmpty()) {
-                // 새로운 파일 업로드 처리
-                fileNames = uploadFiles(uploadFileDTO);
-            } else {
-                // 기존 파일 유지
-                fileNames = postService.readOne(postDTO.getPostId()).getFileNames();
-            }
+        // 작성자 또는 관리자 권한 확인
+        PostDTO existingPost = postService.readOne(postId, isAdmin);
+        if (!isAdmin && !existingPost.getAuthor().equals(currentUsername)) {
+            throw new AccessDeniedException("수정 권한이 없습니다.");
+        }
+
+        try {
+            List<String> fileNames = uploadFileDTO.getFiles() != null && !uploadFileDTO.getFiles().isEmpty() &&
+                    !uploadFileDTO.getFiles().get(0).getOriginalFilename().isEmpty()
+                    ? uploadFiles(uploadFileDTO) // 새 파일 업로드
+                    : existingPost.getFileNames(); // 기존 파일 유지
 
             postDTO.setFileNames(fileNames); // 파일 설정
             postService.modify(postDTO); // 게시글 수정 서비스 호출

@@ -30,7 +30,7 @@ public class CustomSecurityConfig {
                 .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll() // FORWARD 요청 허용
-                        .requestMatchers("/login", "/signup", "/user/login", "/user/signup", "/error").permitAll() // 로그인 및 회원가입 경로 허용
+                        .requestMatchers("/login", "/signup", "/user/login", "/user/signup", "/user/register","/user/join","/error").permitAll() // 로그인 및 회원가입 경로 허용
                         .requestMatchers("/images/**", "/css/**", "/js/**", "/webjars/**").permitAll() // 정적 리소스 허용
                         .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
                 )

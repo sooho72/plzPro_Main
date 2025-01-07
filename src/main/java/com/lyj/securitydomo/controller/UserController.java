@@ -128,6 +128,7 @@ public class UserController {
         return "redirect:/user/readmypage";
     }
 
+
     // 마이페이지 읽기
     @GetMapping("/readmypage")
     public String readMyPage(Model model, @AuthenticationPrincipal PrincipalDetails principal) {
@@ -167,7 +168,10 @@ public class UserController {
     @GetMapping("/readwriting/{postId}")
     public String read(@PathVariable Long postId, Model model,
                        @AuthenticationPrincipal PrincipalDetails principal) {
-        PostDTO postDTO = postService.readOne(postId);
+        // 관리자 여부 확인
+        boolean isAdmin = "ADMIN".equals(principal.getUser().getRole());
+
+        PostDTO postDTO = postService.readOne(postId,isAdmin);
         log.info(postDTO);
         model.addAttribute("post", postDTO);
         model.addAttribute("originalImages", postDTO.getOriginalImageLinks()); // 이미지 링크 추가
@@ -183,15 +187,15 @@ public class UserController {
         return "/posting/read"; // 상세보기 페이지
     }
     @GetMapping("/myapp")
-        public String viewMyRequests(Model model, @AuthenticationPrincipal PrincipalDetails principal) {
-            if (principal == null) {
-                // 인증되지 않은 사용자 처리
-                return "redirect:/user/login"; // 로그인 페이지로 리다이렉트
-            }
+    public String viewMyRequests(Model model, @AuthenticationPrincipal PrincipalDetails principal) {
+        if (principal == null) {
+            // 인증되지 않은 사용자 처리
+            return "redirect:/user/login"; // 로그인 페이지로 리다이렉트
+        }
 
-            Long userId = principal.getUser().getUserId();
-            List<RequestDTO> requests = requestService.getRequestsByUserId(userId);
-            model.addAttribute("requests", requests);
+        Long userId = principal.getUser().getUserId();
+        List<RequestDTO> requests = requestService.getRequestsByUserId(userId);
+        model.addAttribute("requests", requests);
         return "/user/myapp";
     }
 }

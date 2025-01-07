@@ -38,13 +38,19 @@ public class AdminController {
      * 신고 목록 조회
      */
     @GetMapping("/reports")
-    public String getReports(Model model) {
-        log.info("신고 목록 조회 요청");
+    public String getReports(
+            @RequestParam(value = "filter", defaultValue = "all") String filter, Model model) {
+        log.info("신고 목록 조회 요청, filter: {}", filter);
 
-        // 전체 신고 목록 조회
-        List<ReportDTO> reportList = reportService.getAllReports();
+        // 필터 설정
+        Boolean onlyVisible = "visible".equalsIgnoreCase(filter);
 
+        // 중복 신고 합산 및 필터 처리
+        List<ReportDTO> reportList = reportService.getUniqueReportsWithCounts(onlyVisible);
+
+        // 모델에 데이터 추가
         model.addAttribute("reportList", reportList);
+        model.addAttribute("filter", filter); // 현재 필터 값을 프론트엔드에 전달
 
         return "admin/reportList"; // 신고 리스트 페이지로 이동
     }
@@ -88,7 +94,7 @@ public class AdminController {
             postService.makePostInvisible(postId);
         }
 
-        return visible ? "신고글과 게시글이 공개 처리되었습니다." : "신고글과 게시글이 비공개 처리되었습니다.";
+        return visible ? "게시글이 공개 처리되었습니다." : "게시글이 비공개 처리되었습니다.";
     }
 
     /**
@@ -98,10 +104,32 @@ public class AdminController {
     public String getAllUsers(Model model) {
         log.info("모든 사용자 목록 조회 요청");
 
+        // 모든 사용자 조회
         List<UserDTO> userList = userService.getAllUsers();
+
+        log.info("조회된 사용자 수: {}", userList.size()); // 사용자 수를 로깅
+        userList.forEach(user -> log.info("사용자 정보: {}", user)); // 각 사용자 정보 로깅
 
         model.addAttribute("userList", userList);
 
         return "admin/users"; // 사용자 리스트 페이지로 이동
+    }
+
+    /**
+     * 사용자 강퇴
+     */
+    @PostMapping("/users/{userId}/ban")
+    @ResponseBody
+    public String banUser(@PathVariable Long userId) {
+        log.info("회원 강퇴 요청: userId={}", userId);
+
+        try {
+            userService.adminDeleteUser(userId); // UserService를 통해 회원 삭제
+            log.info("회원 강퇴 성공: userId={}", userId);
+            return "사용자가 성공적으로 강퇴되었습니다.";
+        } catch (Exception e) {
+            log.error("회원 강퇴 실패: userId={}, error={}", userId, e.getMessage());
+            return "강퇴 중 오류가 발생했습니다. 다시 시도해주세요.";
+        }
     }
 }

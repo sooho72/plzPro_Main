@@ -5,6 +5,7 @@ import com.lyj.securitydomo.domain.User;
 import com.lyj.securitydomo.dto.UserDTO;
 import com.lyj.securitydomo.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -13,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
+@Log4j2
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -35,10 +36,18 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + userId));
     }
 
+    //관리자
     @Override
     public List<UserDTO> getAllUsers() {
-        return userRepository.findAll().stream()
-                .map(user -> modelMapper.map(user, UserDTO.class))
+        List<User> users = userRepository.findAll();
+        log.info("UserRepository에서 조회된 사용자 수: {}", users.size()); // 조회된 사용자 수 로깅
+
+        return users.stream()
+                .map(user -> {
+                    UserDTO userDTO = modelMapper.map(user, UserDTO.class);
+                    log.info("User를 UserDTO로 매핑: {}", userDTO); // 매핑된 DTO 로깅
+                    return userDTO;
+                })
                 .collect(Collectors.toList());
     }
 

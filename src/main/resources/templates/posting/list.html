@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.w3.org/1999/xhtml"
+      layout:decorate="~{layout/basic.html}">
+
+<head>
+  <meta charset="UTF-8">
+  <title>게시글 목록</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu&display=swap" rel="stylesheet">
+  <style>
+    /* 전체 배경색 */
+    body {
+      background-color: #b7dce8;
+      font-family: 'Gaegu', sans-serif;
+    }
+
+    /* 헤더 섹션 스타일 */
+    header {
+      background-color: #4c88cf; /* 헤더 색 */
+      color: white;
+    }
+
+    header .text-white {
+      color: white !important;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+
+    header p {
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* 카드 스타일 */
+    .card {
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .card img {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .card .card-body {
+      padding: 1rem;
+      background-color: white;
+    }
+
+    .card .card-footer {
+      padding: 1rem;
+      background-color: #f8f9fa;
+      border-top: 1px solid #ddd;
+    }
+
+    /* 내가 작성한 글 배지 */
+    .badge {
+      background-color: #6c757d;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border-radius: 15px;
+    }
+
+    /* 페이지네이션 */
+    .pagination .page-item.active .page-link {
+      background-color: #4a90e2;
+      border-color: #4a90e2;
+      color: white;
+    }
+
+    .pagination .page-link {
+      color: #4a90e2;
+    }
+
+    .pagination .page-link:hover {
+      background-color: #e3f2fd;
+    }
+
+    /* 모달 스타일 */
+    .modal-header {
+      background-color: #4a90e2;
+      color: white;
+      border-bottom: none;
+    }
+
+    .modal-title {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+
+    .modal-footer .btn-primary {
+      background-color: #4a90e2;
+      border: none;
+    }
+
+    .modal-footer .btn-primary:hover {
+      background-color: #3b7fc9;
+    }
+
+    .modal-footer .btn-secondary {
+      border: none;
+      color: #4a90e2;
+      background-color: white;
+    }
+
+    .modal-footer .btn-secondary:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+
+</head>
+
+<body>
+<div layout:fragment="content">
+  <header class="py-5">
+    <div class="container px-4 px-lg-5 my-5">
+      <div class="text-center text-white">
+        <h1 class="display-4 fw-bolder">BootakHEY!</h1>
+        <p class="lead fw-normal text-white-50 mb-0">"당신 근처의 커뮤니티
+          가까운 이웃과 함께 도움을 부탁해요!”</p>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 검색창 섹션 -->
+
+  <!-- 게시글 목록 섹션 -->
+  <!-- 게시글 목록 섹션 -->
+  <section class="py-5">
+
+    <div class="container px-4 px-lg-5 mt-5">
+      <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+
+        <!-- posts가 null이거나 비어있을 경우 처리 -->
+        <div th:if="${posts == null or #lists.isEmpty(posts)}"
+             class="text-center">
+          <p>게시글이 없습니다.</p>
+        </div>
+
+        <!-- posts 반복 처리 -->
+        <div class="col mb-5" th:each="post : ${posts}">
+
+          <!-- 게시글 카드 -->
+          <div class="card h-100" th:classappend="${post.author == currentUsername ? 'border-primary' : ''}">
+
+            <!-- 게시글 썸네일 -->
+            <a th:href="@{/posting/read/{postId}(postId=${post.postId})}" class="text-decoration-none">
+              <img class="card-img-top img-thumbnail" th:src="@{${post.getThumbnail()}}" alt="이미지"/>
+            </a>
+
+            <div class="card-body p-4">
+              <div class="text-center">
+                <h5 class="fw-bolder" th:text="${post.title} + '(' + ${post.replyCount} + ')'"></h5>
+                <p th:text="'작성자: ' + ${post.author}"></p>
+                <p th:text="'모집 상태: ' + ${post.status}"></p>
+                <p th:text="'모집 인원: ' + ${post.requiredParticipants} + '명'"></p>
+                <p th:text="'모집 마감일: ' + ${#dates.format(post.deadline, 'yyyy-MM-dd')}"></p>
+
+                <!-- 관리자에게만 신고 건수를 표시 -->
+                <div th:if="${isAdmin}" th:text="'신고 건수: ' + ${post.reportCount} + '건'"></div>
+
+                <!-- 관리자에게만 공개/비공개 상태 표시 -->
+                <span th:if="${isAdmin}">
+                                <span class="badge" th:classappend="${post.isVisible ? 'bg-success' : 'bg-secondary'}">
+                                    <span th:text="${post.isVisible ? '공개' : '비공개'}"></span>
+                                </span>
+                            </span>
+
+                <!-- 작성자 배지 -->
+                <div th:if="${post.author == currentUsername}"
+                     class="badge text-white position-absolute bottom-0 start-50 translate-middle-x mb-3">
+                  내가 작성한 글
+                </div>
+
+              </div>
+            </div>
+
+            <!-- 게시글 목록 -->
+            <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+              <div class="text-center" th:attr="data-post-id=${post.postId}">
+                <!-- 신고 링크 -->
+                <a href="#" class="text-muted text-end position-absolute bottom-0 end-0 me-3 mb-3 d-flex align-items-center"
+                   data-bs-toggle="modal"
+                   data-bs-target="#reportModal"
+                   th:if="${post.author != currentUsername}"
+                   style="font-size: 0.875rem;">
+                  <i class="bi bi-flag-fill me-1"></i> 신고
+                </a>
+
+                <!-- 신청하기 버튼 -->
+                <button type="button" class="btn btn-primary btn-sm mt-auto position-absolute bottom-0 start-50 translate-middle-x mb-3"
+                        data-bs-toggle="modal"
+                        data-bs-target="#applyModal"
+                        th:if="${post.author != currentUsername}">
+                  신청하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+      <li class="page-item" th:each="i : ${#numbers.sequence(1, totalPages)}" th:classappend="${currentPage == i} ? 'active'">
+        <a th:href="@{${baseUrl}(page=${i}, size=8)}" class="page-link" th:text="${i}"></a>    </ul>
+  </nav>
+
+  <!-- 신고하기 모달 -->
+  <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="reportModalLabel">신고하기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="reportForm">
+            <div class="mb-3">
+              <label for="category" class="form-label">신고 유형:</label>
+              <select class="form-select" id="category" required>
+                <option value="">선택하세요</option>
+                <option value="ABUSE">욕설</option>
+                <option value="SPAM">스팸</option>
+                <option value="ADVERTISING">광고</option>
+                <option value="PROMOTION">홍보</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="reason" class="form-label">신고 사유:</label>
+              <textarea class="form-control" id="reason" rows="3" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="submitReport">신고하기</button>
+        </div>
+        <!-- 현재 로그인한 사용자의 ID를 포함 -->
+        <div id="currentUser" th:data-user-id="${currentUserId}"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 신청하기 모달 -->
+  <div class="modal fade" id="applyModal" tabindex="-1" aria-labelledby="applyModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="applyModalLabel">신청하기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="applyForm">
+            <div class="mb-3">
+              <label for="applicationReason" class="form-label">신청 사유:</label>
+              <textarea class="form-control" id="applicationReason" rows="3" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="submitApplication">신청하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      /**
+       * 백드롭 강제 제거 함수
+       */
+      function removeBackdrop() {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open'); // 스크롤 잠금 해제
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      }
+
+      /**
+       * 모달 닫기 함수
+       */
+      function closeModal(modalId) {
+        const modalElement = document.getElementById(modalId);
+        const modalInstance = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+        modalInstance.hide();
+        removeBackdrop(); // 백드롭 강제 제거
+      }
+
+      /**
+       * 신고하기 모달 이벤트
+       */
+      const reportModal = document.getElementById('reportModal');
+      reportModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const postId = button.closest('.text-center').getAttribute('data-post-id'); // 게시글 ID
+        const userId = document.getElementById('currentUser').getAttribute('data-user-id'); // 유저 ID
+
+        // 신고 제출 버튼 클릭 이벤트
+        document.getElementById('submitReport').onclick = function () {
+          const category = document.getElementById('category').value;
+          const reason = document.getElementById('reason').value;
+
+          if (!category || !reason.trim()) {
+            alert('신고 유형과 사유를 입력해주세요.');
+            return;
+          }
+
+          console.log('신고하기 요청 - postId:', postId, 'userId:', userId, '카테고리:', category, '사유:', reason);
+
+          fetch('/report/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              postId: postId,
+              userId: userId,
+              category: category,
+              reason: reason
+            }),
+          })
+                  .then(response => {
+                    console.log('신고 응답 상태 코드:', response.status);
+                    if (!response.ok) throw new Error('신고 요청 실패');
+                    return response.text();
+                  })
+                  .then(data => {
+                    console.log('신고 응답 데이터:', data);
+                    alert(data);
+                    closeModal('reportModal'); // 모달 닫기
+                  })
+                  .catch(error => {
+                    console.error('신고 실패:', error.message);
+                    alert('신고에 실패했습니다. 다시 시도해 주세요.');
+                  });
+        };
+      });
+
+      reportModal.addEventListener('hidden.bs.modal', function () {
+        // 입력 필드 초기화 및 백드롭 제거
+        document.getElementById('category').value = '';
+        document.getElementById('reason').value = '';
+        removeBackdrop();
+      });
+
+      /**
+       * 신청하기 모달 이벤트
+       */
+      const applyModal = document.getElementById('applyModal');
+      applyModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const postId = button.closest('.text-center').getAttribute('data-post-id'); // 게시글 ID
+
+        console.log('신청 모달 열림 - postId:', postId);
+
+        // 신청 버튼에 postId 설정
+        document.getElementById('submitApplication').setAttribute('data-post-id', postId);
+      });
+
+      document.getElementById('submitApplication').addEventListener('click', function () {
+        const postId = parseInt(this.getAttribute('data-post-id'), 10);
+        const applicationReason = document.getElementById('applicationReason').value.trim();
+
+        if (!applicationReason) {
+          alert('신청 사유를 입력해주세요.');
+          return;
+        }
+
+        console.log('신청하기 요청 - postId:', postId, '신청 이유:', applicationReason);
+
+        fetch('/request/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            postId: postId,
+            contentText: applicationReason,
+          }),
+        })
+                .then(response => {
+                  console.log('신청 응답 상태 코드:', response.status);
+                  if (!response.ok) {
+                    return response.text().then(err => {
+                      console.error('신청 실패:', err);
+                      throw new Error(err);
+                    });
+                  }
+                  return response.text();
+                })
+                .then(data => {
+                  console.log('신청 응답 데이터:', data);
+                  alert('신청이 완료되었습니다.');
+                  closeModal('applyModal'); // 모달 닫기
+                })
+                .catch(error => {
+                  console.error('신청 실패:', error.message);
+                  alert('신청에 실패했습니다. 이유: ' + error.message);
+                });
+      });
+
+      applyModal.addEventListener('hidden.bs.modal', function () {
+        // 입력 필드 초기화 및 백드롭 제거
+        document.getElementById('applicationReason').value = '';
+        removeBackdrop();
+      });
+
+      /**
+       * 모든 모달이 닫힌 후 백드롭 제거
+       */
+      document.addEventListener('hidden.bs.modal', removeBackdrop);
+    });
+  </script>
+</div>
+</body>
+</html>

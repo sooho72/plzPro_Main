@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/basic.html}">
+
+<head>
+  <meta charset="UTF-8">
+  <title>게시글 등록</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <  <style>
+  /* 전체 폰트 및 배경 스타일 */
+  body {
+    font-family: 'Gaegu', sans-serif;
+    background-color: #b7dce8;
+  }
+
+  /* 헤더 섹션 스타일 */
+  header {
+    background-color: #4c88cf; /* 헤더 색 */
+    color: white;
+  }
+
+
+
+  header h1 {
+    font-size: 2.5rem; /* 기존 크기 유지 */
+    font-weight: bold;
+  }
+
+  header p {
+    font-size: 1.2rem; /* 기존 크기 유지 */
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* 폼 필드 스타일 */
+  form .form-label {
+    font-weight: bold;
+  }
+
+  form .form-control {
+    border-radius: 8px;
+  }
+
+  form .form-control:focus {
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 0.25rem rgba(74, 144, 226, 0.25);
+  }
+
+  /* 지도 스타일 */
+  #map {
+    border: 2px solid #4a90e2;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    height: 400px;
+  }
+
+  /* 버튼 스타일 */
+  .btn-primary {
+    background-color: #4a90e2;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #3b7fc9;
+  }
+
+  /* 업로드 필드 스타일 */
+  #files {
+    border: 2px dashed #4a90e2;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+  }
+
+  #files:focus {
+    border-color: #3b7fc9;
+  }
+</style>
+  <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=9n21s23li1"></script>
+  <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps-geocoder.js?ncpClientId=9n21s23li1"></script>
+</head>
+
+<body>
+<div layout:fragment="content">
+  <header class="py-5">
+    <div class="container px-4 px-lg-5 my-5">
+      <div class="text-center text-white">
+        <h1 class="display-4 fw-bolder">게시글 등록</h1>
+        <p class="lead fw-normal text-white-50 mb-0">새로운 게시글을 작성해보세요!</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="py-5">
+    <div class="container px-4 px-lg-5 mt-5">
+      <form id="postForm" th:action="@{/posting/register}" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+          <label for="title" class="form-label">제목</label>
+          <input type="text" class="form-control" id="title" name="title" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="contentText" class="form-label">내용</label>
+          <textarea class="form-control" id="contentText" name="contentText" rows="5" required></textarea>
+        </div>
+
+        <div class="mb-3">
+          <label for="requiredParticipants" class="form-label">모집 인원</label>
+          <input type="number" class="form-control" id="requiredParticipants" name="requiredParticipants" min="1" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="deadline" class="form-label">모집 마감일</label>
+          <input type="date" class="form-control" id="deadline" name="deadline"
+                 min="${T(java.time.LocalDate).now()}" required>
+        </div>
+
+        <div>
+          <label>만남 장소 설정</label>
+          <input type="text" id="search" placeholder="장소 검색" style="width:80%; margin-bottom:10px;">
+          <button type="button" id="searchButton">검색</button>
+          <div id="map"></div>
+        </div>
+
+        <input type="hidden" id="latitude" name="lat"> <!-- 위도 -->
+        <input type="hidden" id="longitude" name="lng"> <!-- 경도 -->
+
+        <!-- 숨겨진 필드로 랜덤 이미지 사용 여부 설정 -->
+        <input type="hidden" id="useRandomImage" name="useRandomImage" value="false">
+
+        <div class="mb-3">
+          <label for="files" class="form-label">이미지 업로드</label>
+          <input type="file" class="form-control" id="files" name="files" accept="image/*" multiple>
+        </div>
+
+        <button type="submit" class="btn btn-primary">게시글 등록</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 모달 창 추가 -->
+  <div class="modal" tabindex="-1" id="locationModal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">장소 입력 필요</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>장소를 입력하세요. 장소를 입력하지 않으면 게시글을 등록할 수 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">확인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 스크립트 수정 -->
+  <script>
+    // 폼 제출 이벤트 핸들러
+    document.getElementById('postForm').addEventListener('submit', function (event) {
+      const fileInput = document.getElementById('files');
+      const useRandomImageInput = document.getElementById('useRandomImage');
+      const latitude = document.getElementById('latitude').value;
+      const longitude = document.getElementById('longitude').value;
+
+      // 장소 입력 여부 확인
+      if (!latitude || !longitude) {
+        console.log("장소 정보가 없습니다. 모달 창을 표시합니다.");
+        const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
+        locationModal.show();
+        event.preventDefault(); // 기본 폼 제출 중단
+        return;
+      }
+
+      if (!fileInput.value) {
+        console.log("파일이 업로드되지 않았습니다.");
+        event.preventDefault();
+        const useRandomImage = confirm("이미지가 업로드되지 않았습니다. 랜덤 이미지를 사용하시겠습니까?");
+
+        if (useRandomImage) {
+          console.log("랜덤 이미지를 사용합니다.");
+          useRandomImageInput.value = "true"; // 랜덤 이미지 사용 설정
+          this.submit(); // 폼 다시 제출
+        } else {
+          console.log("사용자가 랜덤 이미지를 거부했습니다.");
+        }
+      }
+    });
+
+    let map, infoWindow;
+
+    // 지도 초기화
+    function initializeMap() {
+      console.log("지도 초기화 시작");
+      map = new naver.maps.Map("map", {
+        center: new naver.maps.LatLng(37.3595316, 127.1052133), // 초기 좌표
+        zoom: 15,
+      });
+
+      infoWindow = new naver.maps.InfoWindow({ anchorSkew: true });
+      console.log("지도 초기화 완료");
+
+      // 지도 클릭 이벤트
+      naver.maps.Event.addListener(map, "click", function (e) {
+        console.log("지도 클릭 이벤트 발생. 위도:", e.coord.lat(), "경도:", e.coord.lng());
+        setLatLng(e.coord); // 클릭한 위치의 위도와 경도를 설정
+      });
+
+      // 검색 버튼 클릭 이벤트
+      document.getElementById("searchButton").addEventListener("click", function () {
+        const address = document.getElementById("search").value;
+        console.log("검색 버튼 클릭. 입력된 주소:", address);
+        if (address.trim() === "") {
+          alert("장소를 입력하세요.");
+          return;
+        }
+        searchAddressToCoordinate(address);
+      });
+    }
+
+    // 위도와 경도를 숨겨진 필드에 설정
+    function setLatLng(coord) {
+      document.getElementById("latitude").value = coord.lat();
+      document.getElementById("longitude").value = coord.lng();
+      console.log("위도와 경도가 설정되었습니다. 위도:", coord.lat(), "경도:", coord.lng());
+    }
+
+    // 주소를 위도/경도로 변환
+    function searchAddressToCoordinate(address) {
+      console.log("주소를 위도/경도로 변환 시작:", address);
+      naver.maps.Service.geocode({ query: address }, function (status, response) {
+        if (status !== naver.maps.Service.Status.OK) {
+          console.error("주소 검색 실패:", status);
+          alert("검색 결과를 찾을 수 없습니다.");
+          return;
+        }
+
+        const result = response.v2.addresses[0]; // 첫 번째 검색 결과 사용
+        const coord = new naver.maps.LatLng(result.y, result.x);
+
+        map.setCenter(coord); // 지도 중심 이동
+        setLatLng(coord); // 위도와 경도를 숨겨진 필드에 설정
+
+        // 지도에 마커 표시
+        new naver.maps.Marker({
+          position: coord,
+          map: map,
+        });
+
+        infoWindow.setContent(`<div style="padding:10px;">${result.roadAddress || result.jibunAddress}</div>`);
+        infoWindow.open(map, coord);
+        console.log("주소 변환 완료. 위도:", coord.lat(), "경도:", coord.lng());
+      });
+    }
+
+    naver.maps.onJSContentLoaded = initializeMap;
+
+    document.getElementById('postForm').addEventListener('submit', function (event) {
+      const deadlineInput = document.getElementById('deadline').value;
+      const selectedDate = new Date(deadlineInput); // 사용자가 선택한 날짜
+      const today = new Date(); // 현재 날짜
+      // 시간 정보를 제거하고 날짜만 비교
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate < today) {
+        alert("모집 마감일은 오늘 이후의 날짜여야 합니다.");
+        event.preventDefault(); // 폼 제출 중단
+      }
+    });
+  </script>
+</div>
+</body>
+</html>

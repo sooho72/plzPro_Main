@@ -30,7 +30,7 @@
 <body>
 <div class="mypage-container">
     <h3>MY PAGE - 정보 수정</h3>
-    <form action="/user/update" method="post">
+    <form id="updateForm" action="/user/update" method="post">
         <!-- 이메일 입력 필드 -->
         <div class="form-group mb-3">
             <label for="email" class="form-label">이메일:</label>
@@ -100,9 +100,46 @@
         <!-- 저장 및 취소 버튼 -->
         <div class="form-group mt-4">
             <button type="submit" class="btn btn-primary w-100 mb-2">정보 저장</button>
-            <button type="button" class="btn btn-outline-secondary w-100" onclick="window.location.href='/user/mypage';">취소</button>
+            <button type="button" class="btn btn-outline-secondary w-100" onclick="history.back();">뒤로가기</button>
         </div>
     </form>
 </div>
+
+<!-- 성공 모달 -->
+<div class="modal" tabindex="-1" id="successModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">정보 수정 완료</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>사용자 정보가 성공적으로 수정되었습니다.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">확인</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 폼 제출 후 성공 모달 띄우기
+    const form = document.getElementById('updateForm');
+    form.addEventListener('submit', function(event) {
+        event.preventDefault(); // 기본 폼 제출 방지
+
+        // Ajax 요청이나 서버 통신을 대신 수행한 후 성공 처리
+        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        successModal.show();
+
+        // 일정 시간 후 또는 모달 확인 버튼 클릭 시 폼 제출
+        successModal._element.querySelector('.btn-primary').addEventListener('click', function() {
+            form.submit(); // 실제 폼 제출
+        });
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

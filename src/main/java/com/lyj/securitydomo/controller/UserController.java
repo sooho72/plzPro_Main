@@ -87,29 +87,45 @@ public class UserController {
      * @return 마이페이지로 리디렉션
      */
     @PostMapping("/update")
-    public String updateUser(@ModelAttribute UserDTO userDTO) {
-        // 기존 사용자 정보 조회
-        User existingUser = userRepository.findById(userDTO.getUserId()).orElseThrow();
+    public String updateUser(
+            @ModelAttribute UserDTO userDTO,
+            @AuthenticationPrincipal PrincipalDetails principal,
+            RedirectAttributes redirectAttributes) {
+        try {
+            // 현재 로그인된 사용자 정보 확인
+            User existingUser = userRepository.findById(principal.getUser().getUserId())
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // 이메일 합치기
-        userDTO.setEmail();  // emailId와 emailDomain을 합쳐서 email 필드를 설정
+            // 이메일 합치기
+            userDTO.setEmail();
 
-        // 비밀번호가 비어있으면 기존 비밀번호 사용, 아니면 새 비밀번호로 암호화 후 설정
-        if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
-            userDTO.setPassword(existingUser.getPassword()); // 기존 비밀번호 유지
-        } else {
-            String encPassword = bCryptPasswordEncoder.encode(userDTO.getPassword()); // 비밀번호 암호화
-            userDTO.setPassword(encPassword); // 암호화된 비밀번호로 설정
+            // 비밀번호가 비어있으면 기존 비밀번호 사용, 아니면 새 비밀번호로 암호화 후 설정
+            if (userDTO.getPassword() == null || userDTO.getPassword().isEmpty()) {
+                userDTO.setPassword(existingUser.getPassword());
+            } else {
+                String encPassword = bCryptPasswordEncoder.encode(userDTO.getPassword());
+                userDTO.setPassword(encPassword);
+            }
+
+            // 기존 정보를 유지하면서 업데이트된 정보 적용
+            existingUser.setEmail(userDTO.getEmail());
+            existingUser.setPassword(userDTO.getPassword());
+            existingUser.setBirthDate(userDTO.getBirthDate());
+            existingUser.setCity(userDTO.getCity());
+            existingUser.setState(userDTO.getState());
+
+            // 저장
+            userService.save(existingUser);
+
+            // 성공 메시지 설정
+            redirectAttributes.addFlashAttribute("message", "정보가 성공적으로 수정되었습니다.");
+        } catch (Exception e) {
+            log.error("사용자 정보 수정 중 오류 발생: {}", e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "정보 수정 중 문제가 발생했습니다.");
+            return "redirect:/user/mypage";
         }
-        userDTO.setRole(existingUser.getRole()); // 기존 권한 유지
 
-        // UserDTO -> User 변환
-        User user = modelMapper.map(userDTO, User.class);
-
-        // 수정된 사용자 정보 저장
-        userService.save(user);
-
-        return "redirect:/user/mypage"; // 마이페이지로 리디렉션
+        return "redirect:/user/readmypage";
     }
 
     // 마이페이지 읽기

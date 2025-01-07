@@ -21,7 +21,8 @@ public class UserDTO {
 
     // 이메일을 합쳐서 하나의 이메일 주소로 설정하는 메서드
     public void setEmail() {
-        this.email = emailId + "@" + emailDomain;
+        if (this.email == null || this.email.isEmpty()) {
+            this.email = this.emailId + "@" + this.emailDomain;
+        }
     }
-
 }

@@ -26,47 +26,38 @@ public class CustomSecurityConfig {
     // SecurityFilterChain을 설정하여 각 요청의 보안 규칙을 정의
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // HttpSecurity를 통해 CSRF 비활성화 및 권한 규칙 설정
         http
                 .csrf(csrf -> csrf.disable()) // CSRF 보호 비활성화
                 .authorizeHttpRequests(auth -> auth
-                        // 특정 DispatcherType을 허용
-                        .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll()
-                        // 로그인, 회원가입, 특정 경로는 인증 없이 접근 가능
-                        .requestMatchers("/login", "/signup","/replies/**", "/user/**", "/", "/all", "/posting/**", "/view/**").permitAll()
-                        // POST 요청의 /report/create 경로에 대한 접근 허용 (신고 기능)
-                        .requestMatchers(HttpMethod.POST, "/report/create").permitAll()
-                        // 관리자 경로 접근 권한 설정 (ADMIN 권한 필요)
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        // 정적 리소스에 대한 접근 허용
-                        .requestMatchers("/images/**", "/css/**", "/js/**", "/webjars/**").permitAll()
-                        // 나머지 모든 요청은 인증 필요
-                        .anyRequest().authenticated())
-                // 폼 로그인 설정
+                        .dispatcherTypeMatchers(DispatcherType.FORWARD).permitAll() // FORWARD 요청 허용
+                        .requestMatchers("/login", "/signup", "/user/login", "/user/signup", "/error").permitAll() // 로그인 및 회원가입 경로 허용
+                        .requestMatchers("/images/**", "/css/**", "/js/**", "/webjars/**").permitAll() // 정적 리소스 허용
+                        .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
+                )
                 .formLogin(form -> form
-                        .loginPage("/user/login") // 사용자 정의 로그인 페이지 경로 설정
-                        .loginProcessingUrl("/loginProcess") // 로그인 처리를 위한 URL
-                        .defaultSuccessUrl("/posting/list") // 로그인 성공 후 이동할 페이지 (홈페이지)
-                        .failureUrl("/user/login?error=true")  // 로그인 실패 시 URL
+                        .loginPage("/user/login") // 사용자 정의 로그인 페이지
+                        .loginProcessingUrl("/loginProcess") // 로그인 처리 URL
+                        .defaultSuccessUrl("/posting/list") // 로그인 성공 시 이동할 경로
+                        .failureUrl("/user/login?error=true") // 로그인 실패 시 이동할 경로
+                        .permitAll() // 로그인 페이지는 모든 사용자 접근 허용
                 )
                 .logout(logout -> logout
                         .logoutUrl("/logout") // 로그아웃 처리 URL
-                        .logoutSuccessUrl("/") // 로그아웃 성공 시 이동할 경로
+                        .logoutSuccessUrl("/") // 로그아웃 성공 시 이동 경로
                         .invalidateHttpSession(true) // 세션 무효화
-                        .clearAuthentication(true)); // 인증 정보 제거
+                        .clearAuthentication(true) // 인증 정보 제거
+                        .permitAll() // 로그아웃은 모든 사용자 접근 허용
+                );
 
-        // AuthenticationManager를 HttpSecurity 내에서 설정
+        // 사용자 인증 관리 설정
         AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
         auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder());
 
-        return http.build(); // 최종 SecurityFilterChain 반환
+        return http.build();
     }
 
-    // BCryptPasswordEncoder 빈 설정으로 비밀번호 암호화 사용
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-
-    }
+}
